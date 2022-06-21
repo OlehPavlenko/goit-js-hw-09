@@ -1,53 +1,52 @@
-import flatpickr from 'flatpickr';
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
+import flatpickr from "flatpickr";
+import "flatpickr/dist/flatpickr.min.css";
 
-const dateInput = document.querySelector('#datetime-picker');
-const startBtn = document.querySelector('[data-start]');
-const dataDays = document.querySelector('[data-days]');
-const dataHours = document.querySelector('[data-hours]');
-const dataMinutes = document.querySelector('[data-minutes]');
-const dataSeconds = document.querySelector('[data-seconds]');
-
-let futureDate = '';
-let currentDate = '';
-let dateDifference = '';
-let timerId = 0;
+const refs = {
+    startBtn: document.querySelector('[data-start]'),
+    timer: document.querySelector('.timer'),
+}
 
 const options = {
   enableTime: true,
   time_24hr: true,
   defaultDate: new Date(),
   minuteIncrement: 1,
-
-  onClose(selectedDates) {
-    if (selectedDates[0].getTime() < Date.now()) {
-      startBtn.disabled = true;
-      Notify.failure('Please choose a date in the future');
-    } else if (timerId !== 0) {
-      console.log(timerId);
-      clearInterval(timerId);
-      Notify.success('Timer stopped his job succesfully!');
-      Notify.success('Please choose a new date!');
-      startBtn.disabled = false;
-      futureDate = selectedDates[0].getTime();
-      currentDate = Date.now();
-      dateDifference = futureDate - currentDate;
-      convertMs(dateDifference);
-    } else {
-      startBtn.disabled = false;
-      console.log(timerId);
-      futureDate = selectedDates[0].getTime();
-      currentDate = Date.now();
-      dateDifference = futureDate - currentDate;
-      convertMs(dateDifference);
-    }
-  },
+    onClose(selectedDates) {
+        selectedDate = selectedDates[0].getTime();
+        if (selectedDate <= Date.now()) {
+            Notify.failure('Please choose a date in the future');
+        }
+        else {
+            refs.startBtn.disabled = false;
+        }
+    },
 };
 
-const fp = flatpickr('#datetime-picker', options);
+let selectedDate;
 
-function addLeadingZero(value) {
-  return value.padStart(2, '0');
+flatpickr("#datetime-picker", options);
+
+refs.startBtn.disabled = true;
+refs.startBtn.addEventListener('click', onStartTimer);
+
+function onStartTimer() {
+    const intervalID = setInterval(() => {
+        const interval = selectedDate - Date.now();
+        const date = convertMs(interval);
+        if (date.seconds < 0) {
+            clearInterval(intervalID);
+            return;
+        }
+        updateTimer(date);  
+    }, 1000)
+}
+
+function updateTimer({ days, hours, minutes, seconds }) {
+    refs.timer.querySelector('[data-days]').textContent = addLeadingZero(days);
+    refs.timer.querySelector('[data-hours]').textContent = addLeadingZero(hours);
+    refs.timer.querySelector('[data-minutes]').textContent = addLeadingZero(minutes);
+    refs.timer.querySelector('[data-seconds]').textContent = addLeadingZero(seconds);
 }
 
 function convertMs(ms) {
@@ -56,39 +55,19 @@ function convertMs(ms) {
   const minute = second * 60;
   const hour = minute * 60;
   const day = hour * 24;
+
   // Remaining days
   const days = Math.floor(ms / day);
-  dataDays.textContent = addLeadingZero(days.toString());
   // Remaining hours
   const hours = Math.floor((ms % day) / hour);
-  dataHours.textContent = addLeadingZero(hours.toString());
   // Remaining minutes
   const minutes = Math.floor(((ms % day) % hour) / minute);
-  dataMinutes.textContent = addLeadingZero(minutes.toString());
   // Remaining seconds
   const seconds = Math.floor((((ms % day) % hour) % minute) / second);
-  dataSeconds.textContent = addLeadingZero(seconds.toString());
 
   return { days, hours, minutes, seconds };
 }
 
-function onStart() {
-  if (dateDifference >= 1000) {
-    console.log(dateDifference);
-    currentDate = Date.now();
-    dateDifference = futureDate - currentDate;
-    convertMs(dateDifference);
-  } else {
-    clearInterval(timerId);
-    Notify.success('Timer fineshed his job succesfully!');
-  }
+function addLeadingZero(value) {
+    return value.toString().padStart(2, '0');
 }
-
-function counting() {
-  startBtn.disabled = true;
-  timerId = setInterval(onStart, 1000);
-}
-
-startBtn.addEventListener('click', () => {
-  counting(), Notify.success('Success your timer has been started!');
-});

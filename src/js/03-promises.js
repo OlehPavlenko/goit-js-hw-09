@@ -1,42 +1,45 @@
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
-const sbmtBtn = document.querySelector('.form');
 
-function createPromise() {
+function createPromise(position, delay) {
   const shouldResolve = Math.random() > 0.3;
+
   return new Promise((resolve, reject) => {
     if (shouldResolve) {
-      resolve();
+      resolve({
+        position: position,
+        delay: delay,
+      });
     } else {
-      reject();
+      reject({
+        position: position,
+        delay: delay,
+      });
     }
   });
 }
 
-function submitForm(delay, step, amount) {
-  for (let i = 1; i <= amount; i += 1) {
-    setTimeout(
-      () =>
-        createPromise(delay, step, amount)
-          .then(() => {
-            Notify.success(
-              `Fullfilled promise ${i} in ${i * step + delay} mseconds`
-            );
-          })
-          .catch(() => {
-            Notify.failure(
-              `Rejected promise ${i} in ${i * step + delay} mseconds`
-            );
-          }),
-      i * step + delay
-    );
+const form = document.querySelector('.form');
+form.addEventListener('submit', onFormSubmit);
+
+function onFormSubmit(e) {
+  e.preventDefault();
+
+  let {
+    elements: { delay, step, amount },
+  } = e.target;
+
+  const delayValue = Number(delay.value);
+  const stepValue = Number(step.value);
+
+  for (let i = 1, delay = delayValue; i <= amount.value; i += 1, delay += stepValue) {
+    setTimeout(() => {
+      createPromise(i, delay)
+        .then(({ position, delay }) => {
+          Notify.success(`✅ Fulfilled promise ${position} in ${delay}ms`);
+        })
+        .catch(({ position, delay }) => {
+          Notify.failure(`❌ Rejected promise ${position} in ${delay}ms`);
+        });
+    }, delay);
   }
 }
-
-sbmtBtn.addEventListener('submit', e => {
-  e.preventDefault();
-  submitForm(
-    Number(e.currentTarget.elements[0].value),
-    Number(e.currentTarget.elements[1].value),
-    Number(e.currentTarget.elements[2].value)
-  );
-});
